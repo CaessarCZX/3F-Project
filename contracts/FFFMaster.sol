@@ -13,10 +13,11 @@ contract FFFMaster {
     struct Member {
         address payable client;
         address[] enrolled;
-        UserType userType;
-        Rank rank;
         bool isActive;
+        bool isRegistered;
         uint balance;
+        Rank rank;
+        UserType userType;
     }
 
     // Memebers within 3F contract
@@ -30,6 +31,11 @@ contract FFFMaster {
 
     modifier onlyActiveMember(){
         require(members[msg.sender].isActive, "Member not active");
+        _;
+    }
+
+    modifier  checkIfNotRegistered() {
+        require(!members[msg.sender].isRegistered, "Member already exists");
         _;
     }
 
@@ -83,11 +89,14 @@ contract FFFMaster {
     *                 MASTER PUBLIC FUNCTIONS                   *
     *----------------------------------------------------------*/
 
+    // TODO: Modify this function for testing with real wallets
     receive() external payable {
         // Event for deposit to constract
         emit Deposit(msg.sender, msg.value);
     }
 
+    // TODO: Modify this function when will be deployed 
+    // to production
     function deposit() public payable { }
 
     function deactivateMember(address _client) public onlyMaster onlyActiveMember {
@@ -144,6 +153,31 @@ contract FFFMaster {
         emit Withdraw(msg.sender, _amount);
     }
 
+    //Create a new member to contract
+    //  @Dev: 'checkIfRegistered' verify if the current sender is alrady registered
+    function createMember(address payable _client) public checkIfNotRegistered {
+        // To assign new member to direction
+        Member storage newMember = members[_client];
+
+        // Validations
+        require(master != _client, "You cannot create an account with the master address.");
+        require(!members[_client].isActive, "Member already exists");
+
+        // To initalize the new member
+        newMember.client = _client;
+        newMember.isActive = true;
+        newMember.isRegistered = true;
+        newMember.balance = 0;
+        newMember.rank = Rank.Sapphire;
+        newMember.userType = UserType.Client;
+
+        // Increase members count
+        totalMembers++;
+
+        // Emit event for new member
+        emit NewMember(_client);
+    }
+
     /*----------------------------------------------------------*
     *               MASTER EXTERNAL FUNCTIONS                   *
     *----------------------------------------------------------*/
@@ -162,28 +196,6 @@ contract FFFMaster {
         return members[msg.sender].balance;
     }
 
-    //Create a new member to contract
-    function createMember(address payable _client) external {
-        // To assign new member to direction
-        Member storage newMember = members[_client];
-
-        // Validations
-        require(master != _client, "You cannot create an account with the master address.");
-        require(!members[_client].isActive, "Member already exists");
-
-        // To initalize the new member
-        newMember.client = _client;
-        newMember.isActive = true;
-        newMember.rank = Rank.Sapphire;
-        newMember.userType = UserType.Client;
-        newMember.balance = 0;
-
-        // Increase members count
-        totalMembers++;
-
-        // Emit event for new member
-        emit NewMember(_client);
-    }
 
     function transferMemberToMember(address payable _to, uint _amount)
         external 
@@ -234,7 +246,7 @@ contract FFFMaster {
     }
 
     /*----------------------------------------------------------*
-    *               MEMBER INTERNAL FUNCTIONS                   *
+    *                MEMBER PRIVATE FUNCTIONS                   *
     *----------------------------------------------------------*/
 
 }
