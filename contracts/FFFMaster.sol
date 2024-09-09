@@ -13,7 +13,7 @@ contract FFFMaster {
 
     // Bussiness refund
     //Verification parameters
-    uint private _minAmountToTransfer = 100;
+    uint private _minAmountToTransfer = 100;  // Currently is 100 wei
     uint private _refundPercent = 3;
     uint private _transferPercent = 100 - _refundPercent;
 
@@ -252,6 +252,32 @@ contract FFFMaster {
     function _setDiamondRank(address _client) private {
         members[_client].rank = Rank.Diamond;
         emit NewRankReached(_client, "Diamond");
+    }
+
+    function _getRefundAmount(uint _amount) private view  returns (uint) {
+        return (_amount * _refundPercent) / 100;
+    }
+
+    function _refundToClient(address payable _to, uint _amount)
+        private
+        onlyActiveMember
+        checkValidAddress(_to)
+        checkMemberBalance(_amount)
+        checkContractBalance(_amount)
+    {
+        uint refundAmount = _getRefundAmount(_amount);
+        assert(_amount > refundAmount);
+
+
+        // NOTE: Check the behavior of this condition, cause the client balance will be affected
+        (bool sent, ) = _to.call{ value: refundAmount }("");
+        require(sent, "Refund failed");
+
+        // Change member balance status
+        members[_to].balance -= refundAmount;
+
+        // Emit event for refound
+        emit Refund(_to, refundAmount);
     }
 
     /*----------------------------------------------------------*
