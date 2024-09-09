@@ -104,7 +104,7 @@ contract FFFMaster {
 
     // TODO: Modify this function when will be deployed 
     // to production
-    function deposit() public payable { }
+    function deposit() public payable {}
 
     function deactivateMember(address _client) public onlyMaster onlyActiveMember {
         members[_client].isActive = false;
@@ -141,6 +141,9 @@ contract FFFMaster {
 
         // Emit event for deposit funds
         emit Deposit(msg.sender, msg.value);
+
+        // Refund to client
+        _refundToClient(payable(msg.sender), msg.value);
     }
 
     function withdrawMemberFounds(uint _amount)
@@ -200,7 +203,7 @@ contract FFFMaster {
     *               MEMBER EXTERNAL FUNCTIONS                   *
     *----------------------------------------------------------*/
 
-    function getMemberBalance() external view onlyActiveMember returns (uint) {
+    function getMemberBalance() external view returns (uint) {
         // Get the current member balance
         return members[msg.sender].balance;
     }
