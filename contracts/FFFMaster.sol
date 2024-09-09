@@ -9,6 +9,13 @@ contract FFFMaster {
     // Bussiness master 
     address payable public master;
     uint public totalMembers;
+    uint public totalActiveMembers;
+
+    // Bussiness refund
+    //Verification parameters
+    uint private _minAmountToTransfer = 100;
+    uint private _refundPercent = 3;
+    uint private _transferPercent = 100 - _refundPercent;
 
     struct Member {
         address payable client;
@@ -101,6 +108,7 @@ contract FFFMaster {
 
     function deactivateMember(address _client) public onlyMaster onlyActiveMember {
         members[_client].isActive = false;
+        totalActiveMembers--;
         emit DesactivateMember(_client);
     }
 
@@ -173,6 +181,7 @@ contract FFFMaster {
 
         // Increase members count
         totalMembers++;
+        totalActiveMembers++;
 
         // Emit event for new member
         emit NewMember(_client);
