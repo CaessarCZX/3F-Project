@@ -127,6 +127,16 @@ contract FFFMaster {
         emit Withdraw(master, _amount);
     }
 
+    // get the total number of contract members, regardless of whether they are active or not 
+    function getTotalMembers() public view returns (uint) {
+        return totalMembers;
+    }
+
+    // Only get the total number of active members per contract
+    function getTotalActiveMembers() public view returns (uint) {
+        return totalActiveMembers;
+    }
+
     /*----------------------------------------------------------*
     *                 MEMBER PUBLIC FUNCTIONS                   *
     *----------------------------------------------------------*/
@@ -188,6 +198,39 @@ contract FFFMaster {
 
         // Emit event for new member
         emit NewMember(_client);
+    }
+
+    // NOTE: Only if nessesary
+    // Return all member details
+    // function getMemberDetails(address _client)
+    //     public
+    //     view
+    //     returns (
+    //         address, 
+    //         address[] memory,
+    //         bool,
+    //         bool,
+    //         uint,
+    //         Rank,
+    //         UserType
+    //     ) 
+    // {
+    //     require(members[_client].isRegistered, "Member not registered");
+
+    //     return (
+    //         members[_client].client,
+    //         members[_client].enrolled,
+    //         members[_client].isActive,
+    //         members[_client].isRegistered,
+    //         members[_client].balance,
+    //         members[_client].rank,
+    //         members[_client].userType
+    //     );
+    // }
+
+    function getMemberDetails(address _client) public view returns (Member memory) {
+        require(members[_client].isRegistered, "Member not registered");
+        return members[_client];
     }
 
     /*----------------------------------------------------------*
