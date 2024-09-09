@@ -228,9 +228,15 @@ contract FFFMaster {
     //     );
     // }
 
+    // Get member struct
     function getMemberDetails(address _client) public view returns (Member memory) {
         require(members[_client].isRegistered, "Member not registered");
         return members[_client];
+    }
+
+    // Get current member struct
+    function getCurrentMemberDetails() public view onlyActiveMember returns (Member memory) {
+        return members[msg.sender];
     }
 
     /*----------------------------------------------------------*
