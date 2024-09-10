@@ -7,9 +7,9 @@ import "./_UserType.sol";
 
 contract FFFMaster {
     // Bussiness master 
-    address payable public master;
-    uint public totalMembers;
-    uint public totalActiveMembers;
+    address payable private master;
+    uint private totalMembers;
+    uint private totalActiveMembers;
 
     // Bussiness refund
     //Verification parameters
@@ -135,6 +135,11 @@ contract FFFMaster {
     // Only get the total number of active members per contract
     function getTotalActiveMembers() public view returns (uint) {
         return totalActiveMembers;
+    }
+
+    // Get the current master address
+    function getMasterAddress() public view returns (address) {
+        return master;
     }
 
     /*----------------------------------------------------------*
