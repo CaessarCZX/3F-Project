@@ -81,6 +81,7 @@ contract FFFMaster {
     event Withdraw(address indexed to, uint amount);
     event Refund(address indexed to, uint amount);
     
+    event ActivateMember(address indexed member);
     event DesactivateMember(address indexed member);
     event NewMember(address indexed member);
     event NewRankReached(address indexed member, string rank);
@@ -90,6 +91,7 @@ contract FFFMaster {
         console.log("Owner contract deployed by:", msg.sender);
         master = payable(msg.sender);
         totalMembers = 0;
+        totalActiveMembers = 0;
     }
 
     /*----------------------------------------------------------*
@@ -110,6 +112,15 @@ contract FFFMaster {
         members[_client].isActive = false;
         totalActiveMembers--;
         emit DesactivateMember(_client);
+    }
+
+    // function to reactivate member as well
+    function activateMember(address _client) public onlyMaster {
+        require(!members[_client].isActive, "Member is already active");
+        members[_client].isActive = true;
+        totalActiveMembers++;
+        emit ActivateMember(_client);
+
     }
 
     function withdraw(uint _amount)
