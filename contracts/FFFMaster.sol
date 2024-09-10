@@ -252,11 +252,10 @@ contract FFFMaster {
     *               MEMBER EXTERNAL FUNCTIONS                   *
     *----------------------------------------------------------*/
 
-    function getMemberBalance() external view returns (uint) {
+    function getMemberBalance() external view onlyActiveMember returns (uint) {
         // Get the current member balance
         return members[msg.sender].balance;
     }
-
 
     function transferMemberToMember(address payable _to, uint _amount)
         external 
