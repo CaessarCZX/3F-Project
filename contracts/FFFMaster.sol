@@ -153,6 +153,33 @@ contract FFFMaster {
         return master;
     }
 
+    // Return all member details
+    function getMemberDetails(address _client)
+        public
+        view
+        returns (
+            address, 
+            address[] memory,
+            bool,
+            bool,
+            uint,
+            Rank,
+            UserType
+        ) 
+    {
+        require(members[_client].isRegistered, "Member not registered");
+
+        return (
+            members[_client].client,
+            members[_client].enrolled,
+            members[_client].isActive,
+            members[_client].isRegistered,
+            members[_client].balance,
+            members[_client].rank,
+            members[_client].userType
+        );
+    }
+
     /*----------------------------------------------------------*
     *                 MEMBER PUBLIC FUNCTIONS                   *
     *----------------------------------------------------------*/
@@ -216,44 +243,45 @@ contract FFFMaster {
         emit NewMember(_client);
     }
 
-    // NOTE: Only if nessesary
     // Return all member details
-    // function getMemberDetails(address _client)
-    //     public
-    //     view
-    //     returns (
-    //         address, 
-    //         address[] memory,
-    //         bool,
-    //         bool,
-    //         uint,
-    //         Rank,
-    //         UserType
-    //     ) 
-    // {
-    //     require(members[_client].isRegistered, "Member not registered");
+    function getCurrentMemberDetails()
+        public
+        view
+        onlyActiveMember
+        returns (
+            address, 
+            address[] memory,
+            bool,
+            bool,
+            uint,
+            Rank,
+            UserType
+        ) 
+    {
+        require(members[msg.sender].isRegistered, "Member not registered");
 
-    //     return (
-    //         members[_client].client,
-    //         members[_client].enrolled,
-    //         members[_client].isActive,
-    //         members[_client].isRegistered,
-    //         members[_client].balance,
-    //         members[_client].rank,
-    //         members[_client].userType
-    //     );
+        return (
+            members[msg.sender].client,
+            members[msg.sender].enrolled,
+            members[msg.sender].isActive,
+            members[msg.sender].isRegistered,
+            members[msg.sender].balance,
+            members[msg.sender].rank,
+            members[msg.sender].userType
+        );
+    }
+
+    // NOTE: Only if nessesary
+    // Get member struct
+    // function getMemberDetails(address _client) public view returns (Member memory) {
+    //     require(members[_client].isRegistered, "Member not registered");
+    //     return members[_client];
     // }
 
-    // Get member struct
-    function getMemberDetails(address _client) public view returns (Member memory) {
-        require(members[_client].isRegistered, "Member not registered");
-        return members[_client];
-    }
-
     // Get current member struct
-    function getCurrentMemberDetails() public view onlyActiveMember returns (Member memory) {
-        return members[msg.sender];
-    }
+    // function getCurrentMemberDetails() public view onlyActiveMember returns (Member memory) {
+    //     return members[msg.sender];
+    // }
 
     /*----------------------------------------------------------*
     *               MASTER EXTERNAL FUNCTIONS                   *
