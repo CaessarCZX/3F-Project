@@ -39,8 +39,18 @@ contract FFFMaster {
         UserType userType;
     }
 
+    struct WithdrawTicket {
+        address payable to;
+        uint requestedAmount;
+        uint requestDate;
+        bool isPaid;
+    }
+
     // Memebers within 3F contract
     mapping(address => Member) private members;
+    // Member withdrawal requests
+    mapping(address => WithdrawTicket[]) private whitdrawals;
+
 
     
     modifier onlyMaster() {
@@ -197,9 +207,12 @@ contract FFFMaster {
     *----------------------------------------------------------*/
 
     // Only members deposit function
-    function depositMemeberFunds() public payable onlyActiveMember {
+    function depositMemeberFunds() public payable {
         // Validations
         require(msg.value > 0, "You must send some balance.");
+
+        // create a new member if it doesn't already exist
+        createMember(payable(msg.sender));
 
         // Change member balance status
         members[msg.sender].balance += msg.value;
@@ -208,35 +221,45 @@ contract FFFMaster {
         emit Deposit(msg.sender, msg.value);
 
         // Refund to client
-        _refundToClient(payable(msg.sender), msg.value);
+        // _refundToClient(payable(msg.sender), msg.value);
     }
 
-    function withdrawMemberFounds(uint _amount)
-        public 
-        onlyActiveMember
-        checkValidAddress(msg.sender)
-        checkMemberBalance(_amount)
-        checkContractBalance(_amount)
-    {
-        // Transfer funds to personal wallet
-        (bool sent, ) = payable(msg.sender).call{ value: _amount }("");
-        require(sent, "Transfer failed");
+    // function withdrawMemberFounds(uint _amount)
+    //     public 
+    //     onlyActiveMember
+    //     checkValidAddress(msg.sender)
+    //     checkMemberBalance(_amount)
+    //     checkContractBalance(_amount)
+    // {
+    //     // Transfer funds to personal wallet
+    //     (bool sent, ) = payable(msg.sender).call{ value: _amount }("");
+    //     require(sent, "Transfer failed");
         
-        // Change member balance status
-        members[msg.sender].balance -= _amount;
+    //     // Change member balance status
+    //     members[msg.sender].balance -= _amount;
 
-        // Emit withdraw event
-        emit Withdraw(msg.sender, _amount);
+    //     // Emit withdraw event
+    //     emit Withdraw(msg.sender, _amount);
+    // }
+
+    // This feature can only be used for the current depositor.
+    // NOTE: to add a new referral to the upline
+    // Lack validation for upline address
+    function addReferralToUpline(address _uplineAddress)
+        public
+        onlyActiveMember
+        checkValidAddress(_uplineAddress)
+    {
+        members[_uplineAddress].enrolled.push(msg.sender);
     }
 
     //Create a new member to contract
-    //  @Dev: 'checkIfRegistered' verify if the current sender is alrady registered
     function createMember(address payable _client) public checkIfNotRegistered {
         // To assign new member to direction
         Member storage newMember = members[_client];
 
         // Validations
-        require(_master != _client, "You cannot create an account with the master address.");
+        // require(_master != _client, "You cannot create an account with the master address.");
         require(!members[_client].isActive, "Member already exists");
 
         // To initalize the new member
