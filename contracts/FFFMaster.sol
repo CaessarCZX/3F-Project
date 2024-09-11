@@ -44,7 +44,7 @@ contract FFFMaster {
 
     
     modifier onlyMaster() {
-        require(msg.sender == master, "You aren't the master user");
+        require(msg.sender == _master, "Not the master user");
         _;
     }
 
@@ -73,16 +73,17 @@ contract FFFMaster {
         _;
     }
 
-    modifier preventBankruptcy(uint _amount) {
-        uint totalBalance = address(this).balance;
-        uint precision = 100;
-        uint maxQuantity = 75;
-        require(
-            (totalBalance * maxQuantity) / precision >= _amount, 
-            "No more than 75% of the total contract balance may be withdrawn."
-        );
-        _;
-    }
+    // NOTE: Function to verify!!!!
+    // modifier preventBankruptcy(uint _amount) {
+    //     uint totalBalance = address(this).balance;
+    //     uint precision = 100;
+    //     uint maxQuantity = 75;
+    //     require(
+    //         (totalBalance * maxQuantity) / precision >= _amount, 
+    //         "No more than 75% of the total contract balance may be withdrawn."
+    //     );
+    //     _;
+    // }
 
     /*----------------------------------------------------------*
     *                      CONTRACT EVENTS                      *
@@ -101,9 +102,9 @@ contract FFFMaster {
 
     constructor() {
         console.log("Owner contract deployed by:", msg.sender);
-        master = payable(msg.sender);
-        totalMembers = 0;
-        totalActiveMembers = 0;
+        _master = payable(msg.sender);
+        _totalMembers = 0;
+        _totalActiveMembers = 0;
     }
 
     /*----------------------------------------------------------*
@@ -122,7 +123,7 @@ contract FFFMaster {
 
     function deactivateMember(address _client) public onlyMaster onlyActiveMember {
         members[_client].isActive = false;
-        totalActiveMembers--;
+        _totalActiveMembers--;
         emit DesactivateMember(_client);
     }
 
@@ -130,7 +131,7 @@ contract FFFMaster {
     function activateMember(address _client) public onlyMaster {
         require(!members[_client].isActive, "Member is already active");
         members[_client].isActive = true;
-        totalActiveMembers++;
+        _totalActiveMembers++;
         emit ActivateMember(_client);
 
     }
@@ -138,31 +139,30 @@ contract FFFMaster {
     function withdraw(uint _amount)
         public
         onlyMaster
-        checkValidAddress(master)
+        checkValidAddress(_master)
         checkContractBalance(_amount)
-        preventBankruptcy(_amount)
     {
-        (bool sent, ) = master.call{ value: _amount }("");
+        (bool sent, ) = _master.call{ value: _amount }("");
 
         require(sent, "Withdraw not realized");
 
         // Emit event for withdraw funds
-        emit Withdraw(master, _amount);
+        emit Withdraw(_master, _amount);
     }
 
     // get the total number of contract members, regardless of whether they are active or not 
     function getTotalMembers() public view returns (uint) {
-        return totalMembers;
+        return _totalMembers;
     }
 
     // Only get the total number of active members per contract
     function getTotalActiveMembers() public view returns (uint) {
-        return totalActiveMembers;
+        return _totalActiveMembers;
     }
 
     // Get the current master address
     function getMasterAddress() public view returns (address) {
-        return master;
+        return _master;
     }
 
     // Return all member details
@@ -236,7 +236,7 @@ contract FFFMaster {
         Member storage newMember = members[_client];
 
         // Validations
-        require(master != _client, "You cannot create an account with the master address.");
+        require(_master != _client, "You cannot create an account with the master address.");
         require(!members[_client].isActive, "Member already exists");
 
         // To initalize the new member
@@ -248,8 +248,8 @@ contract FFFMaster {
         newMember.userType = UserType.Client;
 
         // Increase members count
-        totalMembers++;
-        totalActiveMembers++;
+        _totalMembers++;
+        _totalActiveMembers++;
 
         // Emit event for new member
         emit NewMember(_client);
@@ -321,7 +321,7 @@ contract FFFMaster {
     {
         // Validations
         require(members[_to].isActive, "Recipient isn't active user"); // Validate the recipient
-        require(msg.sender != master, "Master account can't be used to transfer by this way");
+        require(msg.sender != _master, "Master account can't be used to transfer by this way");
 
         // Change member balance status
         members[msg.sender].balance -= _amount;
@@ -361,9 +361,9 @@ contract FFFMaster {
         emit NewRankReached(_client, "Diamond");
     }
 
-    function _getRefundAmount(uint _amount) private view  returns (uint) {
-        return (_amount * _refundPercent) / 100;
-    }
+    // function _getRefundAmount(uint _amount) private view  returns (uint) {
+    //     return (_amount * _refundPercent) / 100;
+    // }
 
     function _refundToClient(address payable _to, uint _amount)
         private
@@ -372,7 +372,10 @@ contract FFFMaster {
         checkMemberBalance(_amount)
         checkContractBalance(_amount)
     {
-        uint refundAmount = _getRefundAmount(_amount);
+        // NOTE: Change the function _getRefundAmount
+        // IMPORTANT: VERIFY APPLY to '_amount' variable the function 'refundAmount' before to deploy or WILL SEND TOTAL BALANCE TO CLIENT!!!  
+        // Change '_amount' var!!!
+        uint refundAmount = _amount;
         assert(_amount > refundAmount);
 
 
