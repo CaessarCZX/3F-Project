@@ -384,9 +384,9 @@ contract FFFMaster {
         emit NewRankReached(_client, "Diamond");
     }
 
-    // function _getRefundAmount(uint _amount) private view  returns (uint) {
-    //     return (_amount * _refundPercent) / 100;
-    // }
+    function _getRefundAmount(uint _amount, uint _refundPercent) private pure returns (uint) {
+        return (_amount * _refundPercent) / 100;
+    }
 
     function _refundToClient(address payable _to, uint _amount)
         private
