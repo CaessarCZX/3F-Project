@@ -6,16 +6,28 @@ import "./_Rank.sol";
 import "./_UserType.sol";
 
 contract FFFMaster {
-    // Bussiness master 
-    address payable private master;
-    uint private totalMembers;
-    uint private totalActiveMembers;
 
-    // Bussiness refund
-    //Verification parameters
-    uint private _minAmountToTransfer = 100;  // Currently is 100 wei
-    uint private _refundPercent = 3;
-    uint private _transferPercent = 100 - _refundPercent;
+    /*----------------------------------------------------------*
+    *                    Bussiness master                       *
+    *----------------------------------------------------------*/
+    address payable private _master;
+    uint private _totalMembers;
+    uint private _totalActiveMembers;
+
+    /*----------------------------------------------------------*
+    *                VERIFICATION PARAMETERS                    *
+    *----------------------------------------------------------*/
+    
+    // Minimum deposit 
+    uint private _minAmountToTransfer = 10000000000000000;  // Currently is a wei unit (0.01 Ether)
+    
+    // Refund percentage by rank
+    uint private _refundTierOne = 5;
+    uint private _refundTierTwo = 10;
+    uint private _refundTierThree = 15;
+    uint private _refundTierFour = 20;
+    uint private _refundTierFive = 25;
+
 
     struct Member {
         address payable client;
