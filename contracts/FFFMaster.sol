@@ -28,7 +28,7 @@ contract FFFMaster {
     }
 
     // Memebers within 3F contract
-    mapping(address => Member) public members;
+    mapping(address => Member) private members;
 
     
     modifier onlyMaster() {
