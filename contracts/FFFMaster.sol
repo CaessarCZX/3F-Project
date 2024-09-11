@@ -35,8 +35,9 @@ contract FFFMaster {
         bool isActive;
         bool isRegistered;
         uint balance;
+        uint refundTier;
         Rank rank;
-        UserType userType;
+        // UserType userType;
     }
 
     struct WithdrawTicket {
@@ -359,29 +360,39 @@ contract FFFMaster {
     *----------------------------------------------------------*/
 
         // Change member rank functions
-    function _setSapphireRank(address _client) private {
-        members[_client].rank = Rank.Sapphire;
-        emit NewRankReached(_client, "Sapphire");
+    // Tier One
+    function _setSapphireRank(address _memberAddress) private {
+        members[_memberAddress].rank = Rank.Sapphire;
+        members[_memberAddress].refundTier = _refundTierOne;
+        emit NewRankReached(_memberAddress, "Sapphire");
     }
 
-    function _setPearlRank(address _client) private {
-        members[_client].rank = Rank.Pearl;
-        emit NewRankReached(_client, "Pearl");
+    // Tier Two
+    function _setPearlRank(address _memberAddress) private {
+        members[_memberAddress].rank = Rank.Pearl;
+        members[_memberAddress].refundTier = _refundTierTwo;
+        emit NewRankReached(_memberAddress, "Pearl");
     }
 
-    function _setRubyRank(address _client) private {
-        members[_client].rank = Rank.Ruby;
-        emit NewRankReached(_client, "Ruby");
+    // Tier Three
+    function _setRubyRank(address _memberAddress) private {
+        members[_memberAddress].rank = Rank.Ruby;
+        members[_memberAddress].refundTier = _refundTierThree;
+        emit NewRankReached(_memberAddress, "Ruby");
     }
 
-    function _setEmeraldRank(address _client) private {
-        members[_client].rank = Rank.Emerald;
-        emit NewRankReached(_client, "Emerald");
+    // Tier Four
+    function _setEmeraldRank(address _memberAddress) private {
+        members[_memberAddress].rank = Rank.Emerald;
+        members[_memberAddress].refundTier = _refundTierFour;
+        emit NewRankReached(_memberAddress, "Emerald");
     }
 
-    function _setDiamondRank(address _client) private {
-        members[_client].rank = Rank.Diamond;
-        emit NewRankReached(_client, "Diamond");
+    // Tier Five
+    function _setDiamondRank(address _memberAddress) private {
+        members[_memberAddress].rank = Rank.Diamond;
+        members[_memberAddress].refundTier = _refundTierFive;
+        emit NewRankReached(_memberAddress, "Diamond");
     }
 
     function _getRefundAmount(uint _amount, uint _refundPercent) private pure returns (uint) {
