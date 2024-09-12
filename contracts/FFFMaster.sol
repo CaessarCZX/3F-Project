@@ -35,7 +35,7 @@ contract FFFMaster {
         bool isActive;
         bool isRegistered;
         uint balance;
-        uint refundTier;
+        uint refundPercent;
         Rank rank;
         // UserType userType;
     }
@@ -399,26 +399,27 @@ contract FFFMaster {
         return (_amount * _refundPercent) / 100;
     }
 
-    function _refundToClient(address payable _to, uint _amount)
+    function _getRefundPercent(address _memberAddress) private view returns (uint) {
+        return members[_memberAddress].refundPercent;
+    }
+
+    function _refundToClient(address payable _to, uint _totalAmount)
         private
         onlyActiveMember
         checkValidAddress(_to)
         checkMemberBalance(_amount)
         checkContractBalance(_amount)
     {
-        // NOTE: Change the function _getRefundAmount
-        // IMPORTANT: VERIFY APPLY to '_amount' variable the function 'refundAmount' before to deploy or WILL SEND TOTAL BALANCE TO CLIENT!!!  
-        // Change '_amount' var!!!
-        uint refundAmount = _amount;
-        assert(_amount > refundAmount);
+        uint refundPercent = _getRefundPercent(_to);
+        uint refundAmount = _getRefundAmount(_totalAmount, refundPercent);
+        assert(_totalAmount > refundAmount);
 
 
-        // NOTE: Check the behavior of this condition, cause the client balance will be affected
+        // NOTE: Check the behavior of this condition, the client balance won't be affected
+        // IMPORTANT! : not reflect changes in the client's balance sheet status
         (bool sent, ) = _to.call{ value: refundAmount }("");
         require(sent, "Refund failed");
 
-        // Change member balance status
-        members[_to].balance -= refundAmount;
 
         // Emit event for refound
         emit Refund(_to, refundAmount);
