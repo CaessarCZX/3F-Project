@@ -28,6 +28,11 @@ contract FFFMaster {
     uint private _refundTierFour = 20;
     uint private _refundTierFive = 25;
 
+    // Number of members enrolled to rise in rank
+    // NOTE: qualify to improve rank
+    // NOTE: This is a temporal value!!!!
+    uint private _quialifyToImproveRank = 3;
+
 
     struct Member {
         address payable client;
@@ -35,7 +40,8 @@ contract FFFMaster {
         bool isActive;
         bool isRegistered;
         uint balance;
-        uint refundPercent;
+        uint refundPercentToMember;
+        uint refundPercentToBussiness;
         Rank rank;
         // UserType userType;
     }
@@ -337,23 +343,24 @@ contract FFFMaster {
         return members[msg.sender].balance;
     }
 
-    function transferMemberToMember(address payable _to, uint _amount)
-        external 
-        onlyActiveMember
-        checkValidAddress(_to)
-        checkMemberBalance(_amount)
-    {
-        // Validations
-        require(members[_to].isActive, "Recipient isn't active user"); // Validate the recipient
-        require(msg.sender != _master, "Master account can't be used to transfer by this way");
+    // NOTE: Comment this function for waiting functionality
+    // function transferMemberToMember(address payable _to, uint _amount)
+    //     external 
+    //     onlyActiveMember
+    //     checkValidAddress(_to)
+    //     checkMemberBalance(_amount)
+    // {
+    //     // Validations
+    //     require(members[_to].isActive, "Recipient isn't active user"); // Validate the recipient
+    //     require(msg.sender != _master, "Master account can't be used to transfer by this way");
 
-        // Change member balance status
-        members[msg.sender].balance -= _amount;
-        members[_to].balance += _amount;
+    //     // Change member balance status
+    //     members[msg.sender].balance -= _amount;
+    //     members[_to].balance += _amount;
 
-        // Event after state changes
-        emit Transfer(msg.sender, _to, _amount);
-    }
+    //     // Event after state changes
+    //     emit Transfer(msg.sender, _to, _amount);
+    // }
 
     /*----------------------------------------------------------*
     *                MASTER PRIVATE FUNCTIONS                   *
@@ -395,22 +402,21 @@ contract FFFMaster {
         emit NewRankReached(_memberAddress, "Diamond");
     }
 
-    function _getRefundAmount(uint _amount, uint _refundPercent) private pure returns (uint) {
-        return (_amount * _refundPercent) / 100;
+    function _getRefundAmount(uint _totalAmount, uint _refundPercent) private pure returns (uint) {
+        return (_totalAmount * _refundPercent) / 100;
     }
 
-    function _getRefundPercent(address _memberAddress) private view returns (uint) {
-        return members[_memberAddress].refundPercent;
+    function _getMemberRefundPercent(address _memberAddress) private view returns (uint) {
+        return members[_memberAddress].refundPercentToMember;
     }
 
     function _refundToClient(address payable _to, uint _totalAmount)
         private
         onlyActiveMember
         checkValidAddress(_to)
-        checkMemberBalance(_amount)
         checkContractBalance(_amount)
     {
-        uint refundPercent = _getRefundPercent(_to);
+        uint refundPercent = _getMemberRefundPercent(_to);
         uint refundAmount = _getRefundAmount(_totalAmount, refundPercent);
         assert(_totalAmount > refundAmount);
 
@@ -423,6 +429,22 @@ contract FFFMaster {
 
         // Emit event for refound
         emit Refund(_to, refundAmount);
+    }
+
+    function updateRefundPercentage(address _memberAddress) private {
+        uint totalEnrolledPerMember = member[_memberAddress].enrolled.length;
+        require(totalEnrolledPerMember > 0, "No addresses enrolled for this member");
+        uint qualificationRank = totalEnrolledPerMember / _qualifyToImproveRank;
+
+        if (qualificationRank >= 5) {
+            _setDiamondRank(_memberAddress);
+        } else if (qualificationRank >= 4) {
+            _setEmeraldRank(_memberAddress);
+        } else if (qualificationRank >= 3) {
+            _setRubyRank(_memberAddress);
+        } else if (qualificationRank >= 2) {
+            _setPearlRank(_memberAddress);
+        }
     }
 
     /*----------------------------------------------------------*
