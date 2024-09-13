@@ -3,7 +3,6 @@ pragma solidity >=0.8.2 <0.9.0;
 
 import "../node_modules/hardhat/console.sol";
 import "./_Rank.sol";
-import "./_UserType.sol";
 
 contract FFFMaster {
 
@@ -43,7 +42,6 @@ contract FFFMaster {
         uint refundPercentToMember;
         uint refundPercentToBussiness;
         Rank rank;
-        // UserType userType;
     }
 
     struct WithdrawTicket {
@@ -367,6 +365,7 @@ contract FFFMaster {
     *----------------------------------------------------------*/
 
         // Change member rank functions
+
     // Tier One
     function _setSapphireRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Sapphire;
