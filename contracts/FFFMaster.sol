@@ -37,7 +37,6 @@ contract FFFMaster {
         address payable client;
         address[] enrolled;
         bool isActive;
-        bool isRegistered;
         uint balance;
         uint refundPercentToMember;
         uint refundPercentToBussiness;
@@ -68,10 +67,10 @@ contract FFFMaster {
         _;
     }
 
-    modifier  checkIfNotRegistered() {
-        require(!members[msg.sender].isRegistered, "Member already exists");
-        _;
-    }
+    // modifier  checkIfNotRegistered() {
+    //     require(!members[msg.sender].isRegistered, "Member already exists");
+    //     _;
+    // }
 
     modifier checkMemberBalance(uint _amount) {
         require(members[msg.sender].balance >= _amount, "Insufficient balance");
@@ -259,7 +258,8 @@ contract FFFMaster {
     }
 
     //Create a new member to contract
-    function createMember(address payable _client) public checkIfNotRegistered {
+    // NOTE: Add verification for unregistered users, the last verification was erazed
+    function createMember(address payable _client) public {
         // To assign new member to direction
         Member storage newMember = members[_client];
 
