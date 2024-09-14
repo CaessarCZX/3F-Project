@@ -7,7 +7,7 @@ contract FFFBusiness {
     uint128 private _totalActiveMembers;
 
     uint128 private _minAmountToTransfer = 10000000000000000;  // Currently is a wei unit (0.01 Ether)
-    uint8 constant private MAX_TICKETS = 8;
+    uint8 constant private _MAX_TICKETS = 8;
     
     uint8 private _refundTierOne = 5;
     uint8 private _refundTierTwo = 10;
@@ -27,12 +27,8 @@ contract FFFBusiness {
 
     struct Member {
         address payable _memberWallet;
-        address[] enrolled;
         bool isActive;
-        bool isRegistered;
         uint balance;
-        uint8 refundPercentToMember;
-        uint8 refundPercentToBussiness;
         Rank rank;
     }
 
@@ -44,7 +40,8 @@ contract FFFBusiness {
     }
 
     mapping(address => Member) private members;
-    mapping(address => WithdrawTicket[]) private whitdrawals;
+    mapping(address => address[]) private enrolled;
+    mapping(address => WithdrawTicket[]) private withdrawals;
 
     modifier onlyBusiness() {
         require(msg.sender == _businessWallet, "Error: Not the business");
@@ -56,7 +53,7 @@ contract FFFBusiness {
         _;
     }
 
-    modifier onlyActiveMember(Member _currentMember){
+    modifier onlyActiveMember(Member memory _currentMember){
         require(_currentMember.isActive, "Member not active");
         _;
     }
@@ -66,12 +63,12 @@ contract FFFBusiness {
         _;
     }
 
-    modifier onlyFirstDeposit(Member _currentMember){
-        require(_currentMember);
+    modifier checkMemberBalance() {
+        require(members[msg.sender].balance >= _amount, "Insufficient balance");
         _;
     }
 
-    modifier checkMemberBalance(Member _currentMember, uint _amount) {
+    modifier checkMemberBalance(Member memory _currentMember, uint _amount) {
         require(_currentMember.balance >= _amount, "Insufficient balance");
         _;
     }
@@ -98,17 +95,14 @@ contract FFFBusiness {
 
     event Deposit(address indexed from, uint amount);
     event Transfer(address indexed from, address indexed to, uint amount);
-    event Withdraw(address indexed to, uint amount);
+    event WithdrawalRequest(address indexed to, uint amount);
     event Refund(address indexed to, uint amount);
     
     event BusinessWalletSet(address indexed oldBusinessWallet, address indexed newBusinessWallet);
-    event ActivateMember(address indexed member);
-    event DesactivateMember(address indexed member);
     event NewMember(address indexed member);
     event NewRankReached(address indexed member, string rank);
 
     constructor() {
-        // console.log("Owner contract deployed by:", msg.sender);
         _businessWallet = payable(msg.sender);
         _totalMembers = 0;
         _totalActiveMembers = 0;
@@ -116,21 +110,6 @@ contract FFFBusiness {
     }
 
     function deposit() public payable {}
-
-    function deactivateMember(address _memberAddress) public onlyBusiness onlyActiveMember(_memberAddress) {
-        members[_memberAddress].isActive = false;
-        _totalActiveMembers--;
-        emit DesactivateMember(_memberAddress);
-    }
-
-    // function to reactivate member as well
-    function activateMember(address _memberAddress) public onlyBusiness {
-        require(!members[_memberAddress].isActive, "Member is already active");
-        members[_memberAddress].isActive = true;
-        _totalActiveMembers++;
-        emit ActivateMember(_memberAddress);
-
-    }
 
     function getTotalMembers() public view returns (uint) {
         return _totalMembers;
@@ -154,25 +133,17 @@ contract FFFBusiness {
         view
         returns (
             address, 
-            address[] memory,
-            bool,
             bool,
             uint,
-            uint8,
-            uint8,
             Rank
         ) 
     {
-        require(member.isRegistered, "Member not registered");
+        require(member.isActive, "Member not registered");
 
         return (
             member.client,
-            member.enrolled,
             member.isActive,
-            member.isRegistered,
             member.balance,
-            member.refundPercentToMember;
-            member.refundPercentToBussiness;
             member.rank
         );
     }
@@ -182,40 +153,28 @@ contract FFFBusiness {
         view
         returns (
             address, 
-            address[] memory,
-            bool,
             bool,
             uint,
-            uint8,
-            uint8,
             Rank
         ) 
     {
         Member memory member = members[_memberAddress];
-        require(member.isRegistered, "Member not registered");
+        require(member.isActive, "Member not registered");
 
         return (
             member.client,
-            member.enrolled,
             member.isActive,
-            member.isRegistered,
             member.balance,
-            member.refundPercentToMember;
-            member.refundPercentToBussiness;
             member.rank
         );
     }
 
     function createMember(address payable _newMember) public {
-        // require(!members[_client].isRegistered, "Member already exists");
         
         Member storage newMember = members[_newMember];
         newMember.client = _newMember;
         newMember.isActive = true;
-        newMember.isRegistered = true;
         newMember.balance = 0;
-        newMember.refundPercentToMember = _refundTierOne;
-        newMember.refundPercentToBussiness = 100 - _refundTierOne;
         newMember.rank = Rank.Sapphire;
 
         _totalMembers++;
@@ -229,12 +188,18 @@ contract FFFBusiness {
         onlyActiveMember(_to)
         checkValidAddress(_to)
     {
-        members[_to].enrolled.push(_from);
+        enrolled[_to].push(_from);
+        Member storage member = members[_to]
+        updateReferralRank(member, _to);
     }
 
-    function depositMemeberFunds(address _uplineAddress) public payable checkMinimumAmount{
+    function depositMemeberFunds(address _uplineAddress) 
+        public
+        payable
+        checkMinimumAmount
+    {
 
-        if (!members[msg.sender].isRegistered) {
+        if (!members[msg.sender].isActive) {
             createMember(payable(msg.sender));
             addReferralToUpline(_uplineAddress, msg.sender);
         }
@@ -242,9 +207,10 @@ contract FFFBusiness {
         members[msg.sender].balance += msg.value;
         emit Deposit(msg.sender, msg.value);
 
+        // NOTE: CHECK THIS FUNCTION
         Member memory member = members[msg.sender];
         uint refundToMember = _getRefundAmount(msg.value, member.refundPercentToMember);
-        uint refundToBussines = msg.value - refundToMember;
+        uint refundToBusines = msg.value - refundToMember;
         require(refundToBusiness >= refundToMember, "Failed transaction");
 
         _payment(_businessWallet, refundToBusiness);
@@ -254,10 +220,21 @@ contract FFFBusiness {
 
     function withdrawalRequest(uint _requestedAmount)
         public
-        onlyActiveMember(msg.sender)
-        preventZeroAmount(_requestedAmount) 
+        preventZeroAmount(_requestedAmount)
     {
-        require();
+        Member memory currentMember = members[msg.sender];
+        require(currentMember.isActive, "Member not active");
+        require(currentMember.balance >= _requestedAmount, "Insufficient balance");
+        require(withdrawals[msg.sender].length <= _MAX_TICKETS, "Error can't request more than 5 withdrawals");
+
+        WithdrawTicket memory currentTicket = WithdrawTicket({
+            to: payable(msg.sender),
+            requestedAmount: _requestedAmount,
+            requestDate: block.timestamp,
+            isPaid: false
+        });
+        withdrawals[msg.sender].push(currentTicket);
+        emit WithdrawalRequest(msg.sender, _requestedAmount);
     }
 
     function payToMember(address _memberAddress, uint _amount)
@@ -265,7 +242,7 @@ contract FFFBusiness {
         onlyBusiness
         preventZeroAmount(_amount)
     {
-        
+
     }
 
     function _payment(address payable _to, uint _amount)
@@ -278,6 +255,50 @@ contract FFFBusiness {
 
     function _getRefundAmount(uint _totalAmount, uint _refundPercent) private pure returns (uint) {
         return (_totalAmount * _refundPercent) / 100;
+    }
+
+    function _setNewRank(
+        Member storage currentMember,
+        Ranks newRank,
+        string memory nameRank
+        ) private
+    {
+        currentMember.rank = newRank;
+        emit NewRankReached(_memberAddress, nameRank);
+    }
+
+    function updateReferralRank(
+        Member storage currentMember,
+        address _currentMemberAddress
+        ) private 
+    {
+        uint qualificationRank = erolled[_currentMemberAddress].length / _qualifyToImproveRank;
+
+        if (qualificationRank == 5 && currentMember.rank != Ranks.Diamond) {
+            _setNewRank(
+                currentMember,
+                Ranks.Diamond,
+                "Diamond"
+            )
+        } else if (qualificationRank == 4 && currentMember.rank != Ranks.Emerald) {
+            _setNewRank(
+                currentMember,
+                Ranks.Emerald,
+                "Emerald"
+            )
+        } else if (qualificationRank == 3 && currentMember.rank != Ranks.Ruby) {
+            _setNewRank(
+                currentMember,
+                Ranks.Ruby,
+                "Ruby"
+            )
+        } else if (qualificationRank == 2 && currentMember.rank != Ranks.Pearl) {
+            _setNewRank(
+                currentMember,
+                Ranks.Pearl,
+                "Pearl"
+            )
+        }
     }
 
 }
