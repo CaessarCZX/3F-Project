@@ -30,7 +30,7 @@ contract FFFMaster {
     // Number of members enrolled to rise in rank
     // NOTE: qualify to improve rank
     // NOTE: This is a temporal value!!!!
-    uint private _quialifyToImproveRank = 3;
+    uint private _qualifyToImproveRank = 3;
 
 
     struct Member {
@@ -187,22 +187,18 @@ contract FFFMaster {
             address, 
             address[] memory,
             bool,
-            bool,
             uint,
-            Rank,
-            UserType
+            Rank
         ) 
     {
-        require(members[_client].isRegistered, "Member not registered");
+        require(members[_client].isActive, "Member not registered");
 
         return (
             members[_client].client,
             members[_client].enrolled,
             members[_client].isActive,
-            members[_client].isRegistered,
             members[_client].balance,
-            members[_client].rank,
-            members[_client].userType
+            members[_client].rank
         );
     }
 
@@ -270,10 +266,8 @@ contract FFFMaster {
         // To initalize the new member
         newMember.client = _client;
         newMember.isActive = true;
-        newMember.isRegistered = true;
         newMember.balance = 0;
         newMember.rank = Rank.Sapphire;
-        newMember.userType = UserType.Client;
 
         // Increase members count
         _totalMembers++;
@@ -292,22 +286,18 @@ contract FFFMaster {
             address, 
             address[] memory,
             bool,
-            bool,
             uint,
-            Rank,
-            UserType
+            Rank
         ) 
     {
-        require(members[msg.sender].isRegistered, "Member not registered");
+        require(members[msg.sender].isActive, "Member not registered");
 
         return (
             members[msg.sender].client,
             members[msg.sender].enrolled,
             members[msg.sender].isActive,
-            members[msg.sender].isRegistered,
             members[msg.sender].balance,
-            members[msg.sender].rank,
-            members[msg.sender].userType
+            members[msg.sender].rank
         );
     }
 
@@ -369,35 +359,35 @@ contract FFFMaster {
     // Tier One
     function _setSapphireRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Sapphire;
-        members[_memberAddress].refundTier = _refundTierOne;
+        members[_memberAddress].refundPercentToMember = _refundTierOne;
         emit NewRankReached(_memberAddress, "Sapphire");
     }
 
     // Tier Two
     function _setPearlRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Pearl;
-        members[_memberAddress].refundTier = _refundTierTwo;
+        members[_memberAddress].refundPercentToMember = _refundTierTwo;
         emit NewRankReached(_memberAddress, "Pearl");
     }
 
     // Tier Three
     function _setRubyRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Ruby;
-        members[_memberAddress].refundTier = _refundTierThree;
+        members[_memberAddress].refundPercentToMember = _refundTierThree;
         emit NewRankReached(_memberAddress, "Ruby");
     }
 
     // Tier Four
     function _setEmeraldRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Emerald;
-        members[_memberAddress].refundTier = _refundTierFour;
+        members[_memberAddress].refundPercentToMember = _refundTierFour;
         emit NewRankReached(_memberAddress, "Emerald");
     }
 
     // Tier Five
     function _setDiamondRank(address _memberAddress) private {
         members[_memberAddress].rank = Rank.Diamond;
-        members[_memberAddress].refundTier = _refundTierFive;
+        members[_memberAddress].refundPercentToMember = _refundTierFive;
         emit NewRankReached(_memberAddress, "Diamond");
     }
 
@@ -413,7 +403,7 @@ contract FFFMaster {
         private
         onlyActiveMember
         checkValidAddress(_to)
-        checkContractBalance(_amount)
+        checkContractBalance(_totalAmount)
     {
         uint refundPercent = _getMemberRefundPercent(_to);
         uint refundAmount = _getRefundAmount(_totalAmount, refundPercent);
@@ -431,7 +421,7 @@ contract FFFMaster {
     }
 
     function updateRefundPercentage(address _memberAddress) private {
-        uint totalEnrolledPerMember = member[_memberAddress].enrolled.length;
+        uint totalEnrolledPerMember = members[_memberAddress].enrolled.length;
         require(totalEnrolledPerMember > 0, "No addresses enrolled for this member");
         uint qualificationRank = totalEnrolledPerMember / _qualifyToImproveRank;
 

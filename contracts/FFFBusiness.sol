@@ -15,7 +15,7 @@ contract FFFBusiness {
     uint8 private _refundTierFour = 20;
     uint8 private _refundTierFive = 25;
 
-    uint8 private _quialifyToImproveRank = 3;
+    uint8 private _qualifyToImproveRank = 3;
 
     enum Ranks {
         Sapphire,   // 0
@@ -26,10 +26,10 @@ contract FFFBusiness {
     }
 
     struct Member {
-        address payable _memberWallet;
+        address payable memberWallet;
         bool isActive;
         uint balance;
-        Rank rank;
+        Ranks rank;
     }
 
     struct WithdrawTicket {
@@ -53,22 +53,22 @@ contract FFFBusiness {
         _;
     }
 
-    modifier onlyActiveMember(Member memory _currentMember){
+    modifier onlyActiveMemberStruct(Member memory _currentMember){
         require(_currentMember.isActive, "Member not active");
         _;
     }
 
-    modifier onlyActiveMember(address _currentMember){
+    modifier onlyActiveMemberAddress(address _currentMember){
         require(members[_currentMember].isActive, "Member not active");
         _;
     }
 
-    modifier checkMemberBalance() {
+    modifier checkMemberBalance(uint _amount) {
         require(members[msg.sender].balance >= _amount, "Insufficient balance");
         _;
     }
 
-    modifier checkMemberBalance(Member memory _currentMember, uint _amount) {
+    modifier checkMemberBalanceStruct(Member memory _currentMember, uint _amount) {
         require(_currentMember.balance >= _amount, "Insufficient balance");
         _;
     }
@@ -128,20 +128,20 @@ contract FFFBusiness {
         _businessWallet = payable(_newBusinessWallet);
     }
 
-    function getMemberDetails(Member member)
+    function getMemberDetails(Member memory member)
         public
-        view
+        pure
         returns (
             address, 
             bool,
             uint,
-            Rank
+            Ranks
         ) 
     {
         require(member.isActive, "Member not registered");
 
         return (
-            member.client,
+            member.memberWallet,
             member.isActive,
             member.balance,
             member.rank
@@ -155,14 +155,14 @@ contract FFFBusiness {
             address, 
             bool,
             uint,
-            Rank
+            Ranks
         ) 
     {
         Member memory member = members[_memberAddress];
         require(member.isActive, "Member not registered");
 
         return (
-            member.client,
+            member.memberWallet,
             member.isActive,
             member.balance,
             member.rank
@@ -172,24 +172,24 @@ contract FFFBusiness {
     function createMember(address payable _newMember) public {
         
         Member storage newMember = members[_newMember];
-        newMember.client = _newMember;
+        newMember.memberWallet = _newMember;
         newMember.isActive = true;
         newMember.balance = 0;
-        newMember.rank = Rank.Sapphire;
+        newMember.rank = Ranks.Sapphire;
 
         _totalMembers++;
         _totalActiveMembers++;
 
-        emit NewMember(_client);
+        emit NewMember(_newMember);
     }
 
     function addReferralToUpline(address _to, address _from)
         public
-        onlyActiveMember(_to)
+        onlyActiveMemberAddress(_to)
         checkValidAddress(_to)
     {
         enrolled[_to].push(_from);
-        Member storage member = members[_to]
+        Member storage member = members[_to];
         updateReferralRank(member, _to);
     }
 
@@ -204,21 +204,22 @@ contract FFFBusiness {
             addReferralToUpline(_uplineAddress, msg.sender);
         }
 
-        members[msg.sender].balance += msg.value;
+        Member storage member = members[msg.sender];
+        member.balance += msg.value;
         emit Deposit(msg.sender, msg.value);
 
-        // NOTE: CHECK THIS FUNCTION
-        Member memory member = members[msg.sender];
-        uint refundToMember = _getRefundAmount(msg.value, member.refundPercentToMember);
-        uint refundToBusines = msg.value - refundToMember;
+        uint8 refundPercentToMember = _getRefundPerRank(member);
+
+        uint refundToMember = _getRefundAmount(msg.value, refundPercentToMember);
+        uint refundToBusiness = msg.value - refundToMember;
         require(refundToBusiness >= refundToMember, "Failed transaction");
 
         _payment(_businessWallet, refundToBusiness);
-        _payment(msg.sender, refundToMember);
+        _payment(payable(msg.sender), refundToMember);
         emit Refund(msg.sender, refundToMember);
     }
 
-    function withdrawalRequest(uint _requestedAmount)
+    function withdrawalRequest(uint128 _requestedAmount)
         public
         preventZeroAmount(_requestedAmount)
     {
@@ -230,7 +231,7 @@ contract FFFBusiness {
         WithdrawTicket memory currentTicket = WithdrawTicket({
             to: payable(msg.sender),
             requestedAmount: _requestedAmount,
-            requestDate: block.timestamp,
+            requestDate: uint32(block.timestamp),
             isPaid: false
         });
         withdrawals[msg.sender].push(currentTicket);
@@ -257,6 +258,27 @@ contract FFFBusiness {
         return (_totalAmount * _refundPercent) / 100;
     }
 
+    function _getRefundPerRank(Member storage member)
+        private
+        view
+        returns (uint8) 
+    {
+        if (member.rank == Ranks.Diamond) {
+            return _refundTierFive;
+        } 
+        if (member.rank == Ranks.Emerald) {
+            return _refundTierFour;
+        } 
+        if (member.rank == Ranks.Ruby) {
+            return _refundTierThree;
+        } 
+        if (member.rank == Ranks.Pearl) {
+            return _refundTierTwo;
+        }
+
+        return _refundTierOne;
+    }
+
     function _setNewRank(
         Member storage currentMember,
         Ranks newRank,
@@ -264,7 +286,7 @@ contract FFFBusiness {
         ) private
     {
         currentMember.rank = newRank;
-        emit NewRankReached(_memberAddress, nameRank);
+        emit NewRankReached(currentMember.memberWallet, nameRank);
     }
 
     function updateReferralRank(
@@ -272,32 +294,32 @@ contract FFFBusiness {
         address _currentMemberAddress
         ) private 
     {
-        uint qualificationRank = erolled[_currentMemberAddress].length / _qualifyToImproveRank;
+        uint qualificationRank = enrolled[_currentMemberAddress].length / _qualifyToImproveRank;
 
         if (qualificationRank == 5 && currentMember.rank != Ranks.Diamond) {
             _setNewRank(
                 currentMember,
                 Ranks.Diamond,
                 "Diamond"
-            )
+            );
         } else if (qualificationRank == 4 && currentMember.rank != Ranks.Emerald) {
             _setNewRank(
                 currentMember,
                 Ranks.Emerald,
                 "Emerald"
-            )
+            );
         } else if (qualificationRank == 3 && currentMember.rank != Ranks.Ruby) {
             _setNewRank(
                 currentMember,
                 Ranks.Ruby,
                 "Ruby"
-            )
+            );
         } else if (qualificationRank == 2 && currentMember.rank != Ranks.Pearl) {
             _setNewRank(
                 currentMember,
                 Ranks.Pearl,
                 "Pearl"
-            )
+            );
         }
     }
 
